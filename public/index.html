@@ -355,7 +355,7 @@
                                 alert(`Your ship is ready for: ${score}%`);
                             }, delayInMilliseconds);
                             break; //чтобы цикл не исполнялся дальше
-                        } else if (score === 1) {
+                        } else if (score === 100) {
                             clearInterval(interval);
                             audio.volume = 0.0;
                             SuccessfulPassing();
