@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>tetris.js</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="icon" href="favicon.png" type="image/gif" sizes="16x16">
+</head>
+
+<body>
+    <div class="overlay"></div>
+    <div class="modal">
+        <h2 id="title">Space Tetris</h2>
+        <div class="button easy" id="easy">Easy</div>
+        <div class="button normal" id="normal">Normal</div>
+        <div class="button hard" id="hard">Hard</div>
+
+    </div>
+
+    <script>
+
+        /////////------------аудио-----------////////////
+        let overlay = document.querySelector(".overlay"); //подложка
+        let modal = document.querySelector(".modal");//отражение поверх
+        let speed = 0;
+
+        const soundClickButton = () => {    //звук на click button
+            let ClickButton = document.createElement("audio");
+            ClickButton.src = "click.mp3"; //хранилище
+            ClickButton.autoplay = true; // автомат.запуск
+            ClickButton.volume = 1;
+        }
+
+        modal.addEventListener("click", event => {
+            soundClickButton();
+            delayInMilliseconds = 700;
+            setTimeout(() => {
+                if (event.target.classList.contains("easy")) {
+                    // document.body.style.backgroundImage = "url("")";
+                    speed = 500;
+                } else if (event.target.classList.contains("normal")) {
+                    speed = 300;
+                } else if (event.target.classList.contains("hard")) {
+                    speed = 200;
+                }
+                if (event.target.classList.contains("button")) {
+                    modal.style.display = "none"; //элемент уходит
+                    overlay.style.display = "none";
+                    StartGame();
+                }
+            }, delayInMilliseconds);
+        })
+
+        let StartGame = () => {
+            const audio = document.createElement("audio"); // фоновая дорожка
+            audio.src = "fon.mp3";
+            audio.autoplay = "autoplay";
+            audio.loop = "loop";
+            audio.volume = 0.6; //1-0
+            audio.play();
+
+            const GameOver = () => {    //звук на конец игры
+                let GameOver = document.createElement("audio");
+                GameOver.src = "gameover.mp3"; //хранилище
+                GameOver.autoplay = true; // автомат.запуск
+            }
+            const SuccessfulPassing = () => {    //звук на поворот
+                let successful = document.createElement("audio");
+                successful.src = "successful.mp3"; //хранилище
+                successful.autoplay = true; // автомат.запуск
+                successful.volume = 0.3;
+            }
+
+            const soundBlockDown = () => {    //звук на спуск вниз (вставка после moveDown)
+                let BlockDown = document.createElement("audio");
+                BlockDown.src = "drop.mp3"; //хранилище
+                BlockDown.autoplay = true; // автомат.запуск
+                BlockDown.volume = 0.3;
+            }
+
+            const soundTurnBlock = () => {    //звук на поворот
+                let TurnBlock = document.createElement("audio");
+                TurnBlock.src = "turn.mp3"; //хранилище
+                TurnBlock.autoplay = true; // автомат.запуск
+                TurnBlock.volume = 0.3;
+            }
+
+
+
+            // /////////-----------доп.анимация ---------------////////////
+
+            const Star = document.createElement("img"); //Звезда диагональ
+            document.body.appendChild(Star);
+            Star.src = "star.png"; //хранилище
+            Star.id = "star";
+            Star.width = "30";
+            Star.height = "30";
+            Star.style.position = "absolute";
+
+            const moveStar = (id, speed) => { // движение по диагонали 
+                let falingStar = document.getElementById("star");
+                let right = parseInt(falingStar.style.right);
+                let bottom = parseInt(falingStar.style.top) || 0;
+                if (falingStar.offsetTop > window.innerHeight) { //returns the distance of the current element relative to the top of the offsetParent
+                    bottom = 0;
+                } else {
+                    right = bottom += speed;
+                }
+                falingStar.style.left = right + "px";
+                falingStar.style.top = bottom + "px";
+
+                let move = setTimeout(() => moveStar(id, speed), 30);
+            }
+            moveStar('star', 1);
+
+            const damage = document.createElement("img"); //Звезда статика
+            document.body.appendChild(damage);
+            damage.src = "static_star.gif"; //хранилище
+            damage.width = "30";
+            damage.height = "30";
+            damage.addEventListener("click", event => { 
+                let oops = document.createElement("audio");
+                oops.src = "oops.mp3";
+                oops.autoplay = "autoplay";
+                damage.src = "damage.gif";
+                main.appendChild(damage);
+                damage.style.width = "350px";
+                damage.style.height = "350px";
+                damage.style.marginLeft = "20px";
+            });
+
+            /////////---------создание игрового поля+координаты(setAttribute posX;posY)-----------/////////////
+
+            let Div = document.createElement("div");
+            Div.classList.add("main");
+            document.body.appendChild(Div); //скрыт для home page
+
+            let tetris = document.createElement("div"); //создание дива (весь тетрис (видимый + не видимый))
+            tetris.classList.add("tetris"); //присвоение класса тетрис
+
+            for (let i = 1; i <= 180; i++) {        //цикл для добавление 180 ячеек разметки внутрь дива тетрис
+                let excel = document.createElement("div");  //создание ячейки 50*50
+                excel.classList.add("excel"); //присвоение каждой ячейке класса excel
+                tetris.appendChild(excel); // запись внутрь дива Тетрис каждой ячейки (всего 180)
+            }
+
+            let main = document.getElementsByClassName("main")[0]; // видимая часть тетриса
+            main.appendChild(tetris);  //вставка поля тетрис с разметкой внутри
+
+            let ExcelCell = document.getElementsByClassName("excel"); //вытягиваем массив ячеек с разметкой для присвоения каждой ячейке координат(х-1;у-18 и тд.)
+            let i = 0;
+            for (let y = 18; y >= 1; y--) { //первый левый внизу (1:1)     
+                for (let x = 1; x <= 10; x++) {
+                    ExcelCell[i].setAttribute("posX", x); // переводит в нижний регистр название
+                    ExcelCell[i].setAttribute("posY", y);
+                    i++;
+                }
+            }
+
+            /////------------прорисовка+создание фигур-----------//////////
+
+            let x = 5, y = 15; //статичные координаты вместо [0;0] 15 ряд не виден-сделано для написания логики падения фигур
+            let mainArr = [
+                //вертикальная палка    0 
+                [[0, 1], [0, 2], [0, 3],
+                [[0, 0], [1, -1], [2, -2], [3, -3],],
+                [[0, 0], [-1, 1], [-2, 2], [-3, 3],],
+                [[0, 0], [1, -1], [2, -2], [3, -3],],
+                [[0, 0], [-1, 1], [-2, 2], [-3, 3],],],
+
+                //буква z               1
+                [[1, 0], [-1, 1], [0, 1],
+                [[-1, 0], [-2, 1], [1, 0], [0, 1],],
+                [[1, 0], [2, -1], [-1, 0], [0, -1],],
+                [[-1, 0], [-2, 1], [1, 0], [0, 1],],
+                [[1, 0], [2, -1], [-1, 0], [0, -1],],],
+
+                //буква L обратная      2 
+                [[1, 0], [1, 1], [1, 2],
+                [[0, 0], [0, 0], [1, -1], [-1, -1],],
+                [[0, 0], [-1, 1], [-2, 2], [1, 1],],
+                [[2, 0], [2, 0], [1, -1], [-1, -1],],
+                [[-2, 0], [-1, -1], [0, 0], [1, 1],],],
+
+                //квадрат               3 
+                [[1, 0], [0, 1], [1, 1],
+                [[0, 0], [0, 0], [0, 0], [0, 0],],
+                [[0, 0], [0, 0], [0, 0], [0, 0],],
+                [[0, 0], [0, 0], [0, 0], [0, 0],],
+                [[0, 0], [0, 0], [0, 0], [0, 0],],],
+
+                // //буква L            4 
+                [[1, 0], [0, 1], [0, 2],
+                [[0, 0], [-1, 1], [1, 0], [2, -1],],
+                [[1, 0], [1, 0], [-1, 1], [-1, 1],],
+                [[-1, 0], [0, -1], [2, -2], [1, -1],],
+                [[0, 0], [0, 0], [-2, 1], [-2, 1],],],
+
+                //горизонтальная палка  5
+                [[1, 0], [2, 0], [3, 0],
+                [[0, 0], [-1, 1], [-2, 2], [-3, 3],],
+                [[0, 0], [1, -1], [2, -2], [3, -3],],
+                [[0, 0], [-1, 1], [-2, 2], [-3, 3],],
+                [[0, 0], [1, -1], [2, -2], [3, -3],],],
+
+                //буква z обратная      6 
+                [[1, 0], [1, 1], [2, 1],
+                [[1, 0], [-1, 1], [0, 0], [-2, 1],],
+                [[-1, 0], [1, -1], [0, 0], [2, -1],],
+                [[1, 0], [-1, 1], [0, 0], [-2, 1],],
+                [[-1, 0], [1, -1], [0, 0], [2, -1],],],
+
+                //тройник               7
+                [[1, 0], [2, 0], [1, 1],
+                [[0, 0], [-1, 1], [-1, 1], [-1, 1],],
+                [[1, 0], [0, 0], [0, 0], [2, -1],],
+                [[0, 0], [0, 0], [0, 0], [-1, 1],],
+                [[-1, 0], [1, -1], [1, -1], [0, -1],],],
+
+                //молния вертикаль       8 
+                [[0, 1], [-1, 1], [-1, 2],
+                [[-1, 0], [0, -1], [1, 0], [2, -1],],
+                [[1, 0], [0, 1], [-1, 0], [-2, 1],],
+                [[-1, 0], [0, -1], [1, 0], [2, -1],],
+                [[1, 0], [0, 1], [-1, 0], [-2, 1],],],
+            ]
+
+            let figureBody; //координаты ячеек новообразованной фигуры
+            let currentFigure = 0;
+            let rotate = 1; //отслеживает состояние поворота фигуры
+
+            let createFigure = () => {
+                let getRandom = () => { //random для выбора фигуры по длине массива
+                    return Math.round(Math.random() * (mainArr.length - 1)); // (округление до ближайшего целого (0 или 1)*(7-1))
+                }
+                rotate = 1; //при создании новой фигуры - сбрасывается
+                currentFigure = getRandom();
+                // console.log(currentFigure)
+
+                let firstCoord = [mainArr[currentFigure][0][0], mainArr[currentFigure][0][1]]; //координаты фигуры базовые
+                let secondCoord = [mainArr[currentFigure][1][0], mainArr[currentFigure][1][1]];
+                let thirdCoord = [mainArr[currentFigure][2][0], mainArr[currentFigure][2][1]];
+                // console.log(firstCoord[0],firstCoord[1],secondCoord[0],secondCoord[1],thirdCoord[0],thirdCoord[1])
+
+                figureBody = [     //отрисовка текущей фигуры                                  
+                    document.querySelector(`[posX="${x}"][posY="${y}"]`), //данные let x,y видимость с 14 ряда
+                    document.querySelector(`[posX="${x + firstCoord[0]}"][posY="${y + firstCoord[1]}"]`), //текущая позиция х + основной массив[номер фигуры в массиве][первая строка][первый элемент]
+                    document.querySelector(`[posX="${x + secondCoord[0]}"][posY="${y + secondCoord[1]}"]`),
+                    document.querySelector(`[posX="${x + thirdCoord[0]}"][posY="${y + thirdCoord[1]}"]`),
+                    // console.log(document.querySelector(`[posX="${x + firstCoord[0]}"][posY="${y + firstCoord[1]}"]`)),
+                ];
+
+                figureBody.forEach((element) => {
+                    element.classList.add("figure");//присвоение класса каждому элементу фигуры для работы с css
+                });
+            }
+            createFigure();
+
+            /////-----------Очки----------///////
+            let score = 0;
+            const points = document.createElement("input");
+            points.type = "text";
+            document.body.appendChild(points);
+            points.value = `Your ship is repaired to: ${score}%`;
+            points.id = "points";
+            document.getElementById("points").readOnly = true;
+
+            /////-------------движение фигур+исключения------------/////////
+
+            let movingFigure = () => { //логика падения фигур
+                //текущий набор координт каждой фигуры (ячейки) при перемещении по полю
+                let Cell0 = [figureBody[0].getAttribute("posX"), figureBody[0].getAttribute("posY")];
+                let Cell1 = [figureBody[1].getAttribute("posX"), figureBody[1].getAttribute("posY")];
+                let Cell2 = [figureBody[2].getAttribute("posX"), figureBody[2].getAttribute("posY")];
+                let Cell3 = [figureBody[3].getAttribute("posX"), figureBody[3].getAttribute("posY")];
+                // console.log(Cell0, Cell1, Cell2, Cell3)
+
+                let coordinates = [Cell0, Cell1, Cell2, Cell3];
+
+                let moveFlag = true; //true-двигается еще на ряд вниз
+
+                for (let i = 0; i < coordinates.length; i++) {
+                    if (coordinates[i][1] == 1 ||     //если у=1-конец поля-moveFlag-false
+                        //проверка есть ли на ряд ниже упавшая фигура(ячейка -1 от текущей содержит класс fall)
+                        document.querySelector(`[posX="${coordinates[i][0]}"][posY="${coordinates[i][1] - 1}"]`).classList.contains("fall")) {
+                        moveFlag = false;
+                        break;
+                    }
+                }
+                if (moveFlag) { //движение на ряд вниз возможно moveFlag-true
+                    figureBody.forEach((element) => {
+                        element.classList.remove("figure"); //спускается невидимым без команды
+                    })
+                    //перезапись координат, т.к. moveFlag=true-фигура сдвигается на 1 ряд вниз-по отношению к исходным координатам figureBody -х оставляем как есть
+                    figureBody = [
+                        document.querySelector(`[posX="${Cell0[0]}"][posY="${Cell0[1] - 1}"]`), //у-понижаем на 1
+                        document.querySelector(`[posX="${Cell1[0]}"][posY="${Cell1[1] - 1}"]`),
+                        document.querySelector(`[posX="${Cell2[0]}"][posY="${Cell2[1] - 1}"]`),
+                        document.querySelector(`[posX="${Cell3[0]}"][posY="${Cell3[1] - 1}"]`),
+                    ]
+
+                    figureBody.forEach((element) => { //добвляем класс
+                        element.classList.add("figure"); //добавка цвета (делает спуск видимым)
+                    })
+
+                } else { //упавшая фигура (false-остановка движения,фиксирование на уровне, создание новой фигуры) for
+                    figureBody.forEach((element) => { //если moveFlag-false-удаление класса figure-добавка fall
+                        element.classList.remove("figure");//перевод в сет
+                        soundBlockDown();
+                        element.classList.add("fall"); //упавшая (зафиксирована)
+                    })
+                    //исчезновение собраного ряда после падения
+                    for (let i = 1; i <= 14; i++) { //проверка есть ли на поле заполненные ряды y
+                        let count = 0; //счетчик
+                        for (let k = 1; k <= 10; k++) { //проходит ось х
+                            if (document.querySelector(`[posX="${k}"][posY="${i}"]`).classList.contains("fall")) {
+                                count++; //до 10
+                                if (count == 10) { //ряд заполнен-забрать fall (вертикальные поля??)
+                                    score += 1; //добавка очков ограничитель до 100?
+                                    points.value = `Your ship is repaired to: ${score}%`; //перезапись обновленный score
+                                    for (let m = 1; m <= 10; m++) { //x
+                                        document.querySelector(`[posX="${m}"][posY="${i}"]`).classList.remove("fall") //невидимые
+                                    }
+                                    //спадание на ряд ниже+уход ряда
+                                    let fall = document.querySelectorAll(".fall"); //все переменныеспадание на ряд ниже+уход ряда
+                                    let newFall = []; //координаты ячеек новых в связи со смещением
+                                    // console.log(newFall);
+                                    for (let s = 0; s < fall.length; s++) {
+                                        let fallCoordinates = [fall[s].getAttribute("posX"), fall[s].getAttribute("posY")];//x,y каждого элемента с классом fall
+                                        // console.log(fallCoordinates)
+                                        if (fallCoordinates[1] > i) {
+                                            fall[s].classList.remove("fall");
+                                            newFall.push(document.querySelector(`[posX="${fallCoordinates[0]}"][posY="${fallCoordinates[1] - 1}"]`));//ячейка под ним, у понизится на 1
+                                        }
+                                    }
+                                    for (let a = 0; a < newFall.length; a++) {
+                                        newFall[a].classList.add("fall");
+                                    }
+                                    i--; //понижание ряда
+                                }
+                            }
+                        }
+                    }
+                    //условие для окончания игры-заход на невидимое поле 15 ряд
+                    for (let n = 1; n <= 10; n++) { //если хоть одна ячейка из 15 ряда содержит - fall -игра заканчивается
+                        if (document.querySelector(`[posX="${n}"][posY="15"]`).classList.contains("fall")) {
+                            clearInterval(interval); //прерывание
+                            audio.volume = 0.0;
+                            GameOver();
+                            delayInMilliseconds = 1000;
+                            setTimeout(() => {
+                                alert(`Your ship is ready for: ${score}%`);
+                            }, delayInMilliseconds);
+                            break; //чтобы цикл не исполнялся дальше
+                        } else if (score === 1) {
+                            clearInterval(interval);
+                            audio.volume = 0.0;
+                            SuccessfulPassing();
+                            delayInMilliseconds = 1000;
+                            setTimeout(() => {
+                                alert(`Congratulations!!!
+                                Your ship is ready for: ${score}%
+                                Chewie we're going home!!`);
+                            }, delayInMilliseconds);
+                            break;
+                        }
+                    }
+                    createFigure(); //после окончания движения-создается новая фигура
+                }
+            }
+
+            let interval = setInterval(() => { //скорость движения фигур 500-1 уровень; 300-2й;200-3й
+                movingFigure();
+            }, speed);
+
+            // //////////-------------движение привязка кнопок------------------//////////////////
+
+            let Flag = true;
+
+            window.addEventListener("keydown", event => { //обаботчик на нажатие клавиш
+                let Cell0 = [figureBody[0].getAttribute("posX"), figureBody[0].getAttribute("posY")];
+                let Cell1 = [figureBody[1].getAttribute("posX"), figureBody[1].getAttribute("posY")];
+                let Cell2 = [figureBody[2].getAttribute("posX"), figureBody[2].getAttribute("posY")];
+                let Cell3 = [figureBody[3].getAttribute("posX"), figureBody[3].getAttribute("posY")];
+
+
+                function getNewState(step) { //(1;-1) в зависимости от клавиши, что нажата
+
+                    flag = true; //при каждом проходе функции должен сбрасываться
+
+                    let figureNew = [ //куда можно пойти если нажать вправо или влево (х меняется, у-остается статичным)
+                        document.querySelector(`[posX="${+Cell0[0] + step}"][posY="${Cell0[1]}"]`), //(+)для корректного суммирования 
+                        document.querySelector(`[posX="${+Cell1[0] + step}"][posY="${Cell1[1]}"]`),
+                        document.querySelector(`[posX="${+Cell2[0] + step}"][posY="${Cell2[1]}"]`),
+                        document.querySelector(`[posX="${+Cell3[0] + step}"][posY="${Cell3[1]}"]`),
+
+                    ];
+                    figureNew.forEach((element) => {//проверка можно ли двигаться влево-вправо
+                        if (!element || element.classList.contains("fall")) { //если элемент не существует; или содержит класс fall-flag=false
+                            flag = false;
+                        }
+                    })
+                    if (flag) { //цвет ушел flag-true
+                        figureBody.forEach((element) => {
+                            element.classList.remove("figure");
+                        })
+
+                        figureBody = figureNew; //перезапись из-за изменившихся координат
+
+                        figureBody.forEach((element) => { //возврат
+                            element.classList.add("figure");
+                        })
+                    }
+                }
+                if (event.keyCode == 37) { //влево(A) 37
+                    getNewState(-1); //передча параметра
+                } else if (event.keyCode == 39) { //вправо(D) 39
+                    getNewState(1); //передача параметра
+                } else if (event.keyCode == 40) { //вниз (S) 40
+                    movingFigure(); //запуск быстрого падения
+                } else if (event.keyCode == 38) { //поворот(W) вверх 38 
+                    soundTurnBlock();
+                    flag = true; //при каждом проходе функции должен сбрасываться
+
+                    let firstCoord = [mainArr[currentFigure][0][0], mainArr[currentFigure][0][1]]; //координаты фигуры в массиве
+                    let secondCoord = [mainArr[currentFigure][1][0], mainArr[currentFigure][1][1]];
+                    let thirdCoord = [mainArr[currentFigure][2][0], mainArr[currentFigure][2][1]];
+
+                    let figureNew = [ //новые координаты с учетом поворота
+                        document.querySelector(`[posX="${+Cell0[0] + mainArr[currentFigure][rotate + 2][0][0]}"][posY="${+Cell0[1] + mainArr[currentFigure][rotate + 2][0][1]}"]`),
+                        document.querySelector(`[posX="${+Cell1[0] + mainArr[currentFigure][rotate + 2][1][0]}"][posY="${+Cell1[1] + mainArr[currentFigure][rotate + 2][1][1]}"]`),
+                        document.querySelector(`[posX="${+Cell2[0] + mainArr[currentFigure][rotate + 2][2][0]}"][posY="${+Cell2[1] + mainArr[currentFigure][rotate + 2][2][1]}"]`),
+                        document.querySelector(`[posX="${+Cell3[0] + mainArr[currentFigure][rotate + 2][3][0]}"][posY="${+Cell3[1] + mainArr[currentFigure][rotate + 2][3][1]}"]`),
+                    ];
+                    figureNew.forEach((element) => {//проверка можно ли двигаться влево-вправо
+                        if (!element || element.classList.contains("fall")) { //если элемент не существует; или содержит класс fall-flag=false
+                            flag = false;
+                        }
+                    })
+
+                    if (flag) { //цвет ушел flag-true
+                        figureBody.forEach((element) => {
+                            element.classList.remove("figure");
+                        })
+                        figureBody = figureNew; //перезапись из-за изменившихся координат
+
+                        figureBody.forEach((element) => { //возврат
+                            element.classList.add("figure");
+                        })
+                        if (rotate <= 3) {
+                            rotate++;
+                        } else {
+                            rotate = 1;
+                        }
+                    }
+                }
+            })
+        }
+
+    </script>
+</body>
+
+</html>
