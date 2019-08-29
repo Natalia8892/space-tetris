@@ -17,14 +17,12 @@
         <div class="button easy" id="easy">Easy</div>
         <div class="button normal" id="normal">Normal</div>
         <div class="button hard" id="hard">Hard</div>
-
     </div>
 
     <script>
-
         /////////------------аудио-----------////////////
-        let overlay = document.querySelector(".overlay"); //подложка
-        let modal = document.querySelector(".modal");//отражение поверх
+        let overlay = document.querySelector(".overlay"); //эффект наложения слоя возвращает див
+        let modal = document.querySelector(".modal");//модальное окно с информацией возвращает див
         let speed = 0;
 
         const soundClickButton = () => {    //звук на click button
@@ -36,10 +34,8 @@
 
         modal.addEventListener("click", event => {
             soundClickButton();
-            delayInMilliseconds = 700;
             setTimeout(() => {
                 if (event.target.classList.contains("easy")) {
-                    // document.body.style.backgroundImage = "url("")";
                     speed = 500;
                 } else if (event.target.classList.contains("normal")) {
                     speed = 300;
@@ -51,15 +47,18 @@
                     overlay.style.display = "none";
                     StartGame();
                 }
-            }, delayInMilliseconds);
+            }, 700);
         })
 
+
+
+        ////-----start game----//////
         let StartGame = () => {
             const audio = document.createElement("audio"); // фоновая дорожка
             audio.src = "fon.mp3";
             audio.autoplay = "autoplay";
             audio.loop = "loop";
-            audio.volume = 0.6; //1-0
+            audio.volume = 0.5; //1-0
             audio.play();
 
             const GameOver = () => {    //звук на конец игры
@@ -71,17 +70,17 @@
                 let successful = document.createElement("audio");
                 successful.src = "successful.mp3"; //хранилище
                 successful.autoplay = true; // автомат.запуск
-                successful.volume = 0.3;
+                successful.volume = 0.5;
             }
 
-            const soundBlockDown = () => {    //звук на спуск вниз (вставка после moveDown)
+            const soundBlockDown = () => {     //звук на спуск вниз (movingFigure)
                 let BlockDown = document.createElement("audio");
                 BlockDown.src = "drop.mp3"; //хранилище
                 BlockDown.autoplay = true; // автомат.запуск
                 BlockDown.volume = 0.3;
             }
 
-            const soundTurnBlock = () => {    //звук на поворот
+            const soundTurnBlock = () => {    //звук на поворот (привязка кнопок)
                 let TurnBlock = document.createElement("audio");
                 TurnBlock.src = "turn.mp3"; //хранилище
                 TurnBlock.autoplay = true; // автомат.запуск
@@ -98,14 +97,14 @@
             Star.id = "star";
             Star.width = "30";
             Star.height = "30";
-            Star.style.position = "absolute";
+            Star.style.position = "absolute";//Абсолютно позиционируемый элемент 
 
             const moveStar = (id, speed) => { // движение по диагонали 
                 let falingStar = document.getElementById("star");
                 let right = parseInt(falingStar.style.right);
                 let bottom = parseInt(falingStar.style.top) || 0;
-                if (falingStar.offsetTop > window.innerHeight) { //returns the distance of the current element relative to the top of the offsetParent
-                    bottom = 0;
+                if (falingStar.offsetTop > window.innerHeight) { //Высота (в пикселях) области просмотра окна браузера/ возвращает расстояние текущего элемента относительно вершины offsetParentузла
+                    bottom = 0; //устанавливает или возвращает нижнюю позицию позиционируемого элемента
                 } else {
                     right = bottom += speed;
                 }
@@ -121,7 +120,7 @@
             damage.src = "static_star.gif"; //хранилище
             damage.width = "30";
             damage.height = "30";
-            damage.addEventListener("click", event => { 
+            damage.addEventListener("click", event => {
                 let oops = document.createElement("audio");
                 oops.src = "oops.mp3";
                 oops.autoplay = "autoplay";
@@ -132,11 +131,12 @@
                 damage.style.marginLeft = "20px";
             });
 
-            /////////---------создание игрового поля+координаты(setAttribute posX;posY)-----------/////////////
 
+
+            /////////---------создание игрового поля+координаты(setAttribute posX;posY)-----------/////////////
             let Div = document.createElement("div");
             Div.classList.add("main");
-            document.body.appendChild(Div); //скрыт для home page
+            document.body.appendChild(Div); //скрыт для home page (отражает видиму часть тетриса)
 
             let tetris = document.createElement("div"); //создание дива (весь тетрис (видимый + не видимый))
             tetris.classList.add("tetris"); //присвоение класса тетрис
@@ -160,8 +160,10 @@
                 }
             }
 
-            /////------------прорисовка+создание фигур-----------//////////
 
+
+
+            /////------------прорисовка+создание фигур-----------//////////
             let x = 5, y = 15; //статичные координаты вместо [0;0] 15 ряд не виден-сделано для написания логики падения фигур
             let mainArr = [
                 //вертикальная палка    0 
@@ -250,14 +252,16 @@
                     document.querySelector(`[posX="${x + firstCoord[0]}"][posY="${y + firstCoord[1]}"]`), //текущая позиция х + основной массив[номер фигуры в массиве][первая строка][первый элемент]
                     document.querySelector(`[posX="${x + secondCoord[0]}"][posY="${y + secondCoord[1]}"]`),
                     document.querySelector(`[posX="${x + thirdCoord[0]}"][posY="${y + thirdCoord[1]}"]`),
-                    // console.log(document.querySelector(`[posX="${x + firstCoord[0]}"][posY="${y + firstCoord[1]}"]`)),
                 ];
+                // console.log(document.querySelector(`[posX="${x + firstCoord[0]}"][posY="${y + firstCoord[1]}"]`)),
 
                 figureBody.forEach((element) => {
                     element.classList.add("figure");//присвоение класса каждому элементу фигуры для работы с css
                 });
             }
             createFigure();
+
+
 
             /////-----------Очки----------///////
             let score = 0;
@@ -268,8 +272,9 @@
             points.id = "points";
             document.getElementById("points").readOnly = true;
 
-            /////-------------движение фигур+исключения------------/////////
 
+
+            /////-------------логика падения+исключения------------/////////
             let movingFigure = () => { //логика падения фигур
                 //текущий набор координт каждой фигуры (ячейки) при перемещении по полю
                 let Cell0 = [figureBody[0].getAttribute("posX"), figureBody[0].getAttribute("posY")];
@@ -295,12 +300,13 @@
                         element.classList.remove("figure"); //спускается невидимым без команды
                     })
                     //перезапись координат, т.к. moveFlag=true-фигура сдвигается на 1 ряд вниз-по отношению к исходным координатам figureBody -х оставляем как есть
-                    figureBody = [
-                        document.querySelector(`[posX="${Cell0[0]}"][posY="${Cell0[1] - 1}"]`), //у-понижаем на 1
+                    figureBody = [ //массив с divами
+                        document.querySelector(`[posX="${Cell0[0]}"][posY="${Cell0[1] - 1}"]`), //спуск по у-понижаем на 1
                         document.querySelector(`[posX="${Cell1[0]}"][posY="${Cell1[1] - 1}"]`),
                         document.querySelector(`[posX="${Cell2[0]}"][posY="${Cell2[1] - 1}"]`),
                         document.querySelector(`[posX="${Cell3[0]}"][posY="${Cell3[1] - 1}"]`),
                     ]
+                    // console.log(document.querySelector(`[posX="${Cell0[0]}"][posY="${Cell0[1] - 1}"]`))
 
                     figureBody.forEach((element) => { //добвляем класс
                         element.classList.add("figure"); //добавка цвета (делает спуск видимым)
@@ -350,21 +356,19 @@
                             clearInterval(interval); //прерывание
                             audio.volume = 0.0;
                             GameOver();
-                            delayInMilliseconds = 1000;
                             setTimeout(() => {
                                 alert(`Your ship is ready for: ${score}%`);
-                            }, delayInMilliseconds);
+                            }, 1000);
                             break; //чтобы цикл не исполнялся дальше
                         } else if (score === 100) {
                             clearInterval(interval);
                             audio.volume = 0.0;
                             SuccessfulPassing();
-                            delayInMilliseconds = 1000;
                             setTimeout(() => {
                                 alert(`Congratulations!!!
                                 Your ship is ready for: ${score}%
                                 Chewie we're going home!!`);
-                            }, delayInMilliseconds);
+                            }, 1000);
                             break;
                         }
                     }
@@ -376,8 +380,9 @@
                 movingFigure();
             }, speed);
 
-            // //////////-------------движение привязка кнопок------------------//////////////////
 
+
+            // //////////-------------движение вправо-влево + привязка кнопок------------------//////////////////
             let Flag = true;
 
             window.addEventListener("keydown", event => { //обаботчик на нажатие клавиш
@@ -415,13 +420,13 @@
                         })
                     }
                 }
-                if (event.keyCode == 37) { //влево(A) 37
+                if (event.keyCode == 37) { //влево
                     getNewState(-1); //передча параметра
-                } else if (event.keyCode == 39) { //вправо(D) 39
+                } else if (event.keyCode == 39) { //вправо
                     getNewState(1); //передача параметра
-                } else if (event.keyCode == 40) { //вниз (S) 40
+                } else if (event.keyCode == 40) { //вниз
                     movingFigure(); //запуск быстрого падения
-                } else if (event.keyCode == 38) { //поворот(W) вверх 38 
+                } else if (event.keyCode == 38) { //поворот вверх 
                     soundTurnBlock();
                     flag = true; //при каждом проходе функции должен сбрасываться
 
